@@ -22,13 +22,15 @@
         pkgs.mkShell {
           buildInputs = with pkgs; [
             uv
-            python314
+            python312
             zlib
             pkg-config
+            cmake
+            arrow-cpp
           ];
           shellHook = ''
             export UV_PYTHON_DOWNLOADS="never"
-            export UV_PYTHON="${pkgs.python314}/bin/python3.14"
+            export UV_PYTHON="${pkgs.python312}/bin/python3.12"
           '';
         };
     in

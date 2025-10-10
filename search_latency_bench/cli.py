@@ -212,6 +212,51 @@ def gen(
     )
 
 
+@app.command()
+def dataset(
+    name: str = typer.Option(..., help="HuggingFace dataset name (e.g., microsoft/ms_marco)"),
+    config: str | None = typer.Option(None, help="Dataset configuration"),
+    split: str = typer.Option("train", help="Dataset split"),
+    query_field: str = typer.Option("query", help="Field name containing queries"),
+    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/all)"),
+    num_queries: int | None = typer.Option(None, help="Number of queries to sample"),
+    num_results: int = typer.Option(10, help="Number of results per query"),
+    parallel: bool = typer.Option(False, help="Run queries in parallel"),
+    max_workers: int = typer.Option(20, help="Max parallel workers"),
+    output: str = typer.Option("results", help="Output directory"),
+) -> None:
+    load_dotenv()
+
+    from datasets import load_dataset
+
+    console.print(f"[bold]Loading dataset {name}...[/bold]")
+
+    if config:
+        dataset_obj = load_dataset(name, config, split=split, streaming=True)
+    else:
+        dataset_obj = load_dataset(name, split=split, streaming=True)
+
+    queries = []
+    for example in dataset_obj:
+        if query_field in example:
+            queries.append(example[query_field])
+        if num_queries and len(queries) >= num_queries:
+            break
+
+    console.print(f"[bold]Loaded {len(queries)} queries from {name}[/bold]")
+
+    asyncio.run(
+        run_benchmark_for_apis(
+            queries=queries,
+            api=api,
+            num_results=num_results,
+            parallel=parallel,
+            max_workers=max_workers,
+            output=output,
+        )
+    )
+
+
 def main() -> None:
     app()
 

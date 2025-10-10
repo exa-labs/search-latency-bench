@@ -15,16 +15,20 @@ Credentials needed:
 - `PPLX_API_KEY` - Perplexity search API
 - `OPENAI_API_KEY` - For query generation (optional)
 
+## Sample Queries
+
+The repository includes 250 sample queries from MS MARCO in `sample_queries/msmarco.jsonl` to get started quickly.
+
 ## Usage
 
 ### Basic Benchmarks
 
 ```bash
+# Test with included MS MARCO queries
+uv run bench local --file sample_queries/queries_msmarco.jsonl --api all
+
 # Test a single API
 uv run bench local --file queries.jsonl --api exa-auto
-
-# Compare all APIs
-uv run bench local --file queries.jsonl --api all
 
 # Sample subset of queries
 uv run bench local --file queries.jsonl --num-queries 50 --api all
@@ -44,6 +48,20 @@ uv run bench local --file queries.jsonl --api all --parallel --max-workers 20
 uv run bench gen --count 100 --api all --parallel
 ```
 
+### HuggingFace Datasets
+
+```bash
+# Benchmark with MS MARCO queries
+uv run bench dataset --name microsoft/ms_marco --config v2.1 --num-queries 1000 --api all
+
+# Any HuggingFace dataset
+uv run bench dataset \
+  --name <dataset-name> \
+  --query-field <field-name> \
+  --num-queries 100 \
+  --api exa-auto
+```
+
 ### Advanced Usage
 
 ```bash
@@ -60,7 +78,7 @@ uv run bench local \
 ### API Options
 
 - `exa-auto` - Exa with auto mode
-- `exa-fast` - Exa with fast/keyword mode
+- `exa-fast` - Exa with fast mode
 - `brave` - Brave Search
 - `perplexity` - Perplexity Search
 - `all` - Run all APIs sequentially

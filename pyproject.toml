@@ -13,6 +13,7 @@ dependencies = [
     "perplexityai>=0.10.0",
     "typer>=0.15.1",
     "openai>=1.59.5",
+    "datasets>=4.2.0",
 ]
 
 [project.scripts]
@@ -39,10 +40,10 @@ module-root = ""
 
 [tool.ruff]
 line-length = 120
-target-version = "py314"
+target-version = "py312"
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
