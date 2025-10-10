@@ -1,0 +1,49 @@
+[project]
+name = "search-latency-bench"
+version = "0.1.0"
+description = "Batteries-included search latency benchmark for Exa, Brave, and Perplexity APIs"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "pydantic>=2.10.6",
+    "rich>=13.9.4",
+    "python-dotenv>=1.0.1",
+    "exa-py>=1.15.6",
+    "perplexityai>=0.10.0",
+    "typer>=0.15.1",
+    "openai>=1.59.5",
+]
+
+[project.scripts]
+bench = "search_latency_bench.cli:main"
+
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+    "ruff>=0.9.1",
+    "ty>=0.0.1a21",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.1,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = true
+
+[tool.uv.build-backend]
+module-root = ""
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

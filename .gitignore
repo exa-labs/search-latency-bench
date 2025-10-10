@@ -1,0 +1,41 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+venv/
+env/
+
+# UV
+.uv/
+uv.lock
+
+# Environment variables
+.env
+
+# Output files
+results/
+*.json
+*.csv
+*.html
+
+# IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+data/
+.direnv
+*.zip
+
