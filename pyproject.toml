@@ -1,7 +1,7 @@
 [project]
 name = "search-latency-bench"
 version = "0.1.0"
-description = "Batteries-included search latency benchmark for Exa, Brave, and Perplexity APIs"
+description = "Batteries-included search latency benchmark for Exa, Brave, Perplexity, and Parallel APIs"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -14,6 +14,7 @@ dependencies = [
     "typer>=0.15.1",
     "openai>=1.59.5",
     "datasets>=4.2.0",
+    "parallel-web>=0.3.4",
 ]
 
 [project.scripts]

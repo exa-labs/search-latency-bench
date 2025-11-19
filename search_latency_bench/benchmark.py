@@ -165,7 +165,7 @@ async def run_benchmark(
     engine: SearchEngine,
     queries: list[str],
     num_results: int,
-    api_name: Literal["exa-auto", "exa-fast", "brave", "perplexity"],
+    api_name: Literal["exa-auto", "exa-fast", "brave", "perplexity", "parallel"],
     parallel: bool = True,
     max_workers: int = 20,
 ) -> BenchmarkResult:

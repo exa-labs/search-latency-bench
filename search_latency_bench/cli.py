@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .benchmark import run_benchmark
-from .engines import BraveSearchEngine, ExaSearchEngine, PerplexitySearchEngine
+from .engines import BraveSearchEngine, ExaSearchEngine, ParallelSearchEngine, PerplexitySearchEngine
 from .querygen import generate_queries
 from .types import BenchmarkResult
 
@@ -101,11 +101,12 @@ async def run_benchmark_for_apis(
     output_dir.mkdir(exist_ok=True)
 
     if api == "all":
-        apis_to_test: list[Literal["exa-auto", "exa-fast", "brave", "perplexity"]] = [
+        apis_to_test: list[Literal["exa-auto", "exa-fast", "brave", "perplexity", "parallel"]] = [
             "exa-auto",
             "exa-fast",
             "brave",
             "perplexity",
+            "parallel",
         ]  # type: ignore[assignment]
     else:
         apis_to_test = [api]  # type: ignore[assignment]
@@ -129,6 +130,8 @@ async def run_benchmark_for_apis(
                     engine = BraveSearchEngine()
                 case "perplexity":
                     engine = PerplexitySearchEngine()
+                case "parallel":
+                    engine = ParallelSearchEngine()
 
             result = await run_benchmark(
                 engine=engine,

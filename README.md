@@ -13,6 +13,7 @@ Credentials needed:
 - `EXA_API_KEY` - Exa search API
 - `BRAVE_API_KEY` - Brave search API
 - `PPLX_API_KEY` - Perplexity search API
+- `PARALLEL_API_KEY` - Parallel search API
 - `OPENAI_API_KEY` - For query generation (optional)
 
 ## Sample Queries
@@ -81,6 +82,7 @@ uv run bench local \
 - `exa-fast` - Exa with fast mode
 - `brave` - Brave Search
 - `perplexity` - Perplexity Search
+- `parallel` - Parallel Search
 - `all` - Run all APIs sequentially
 
 ## Input Formats
