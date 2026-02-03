@@ -3,6 +3,7 @@ from .engine import SearchEngine
 from .exa import ExaSearchEngine, SearchType
 from .parallel import ParallelSearchEngine
 from .perplexity import PerplexitySearchEngine
+from .tavily import SearchDepth, TavilySearchEngine
 
 __all__ = [
     "SearchEngine",
@@ -10,5 +11,7 @@ __all__ = [
     "ExaSearchEngine",
     "ParallelSearchEngine",
     "PerplexitySearchEngine",
+    "TavilySearchEngine",
+    "SearchDepth",
     "SearchType",
 ]

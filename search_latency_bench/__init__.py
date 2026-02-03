@@ -1,5 +1,13 @@
 from .benchmark import run_benchmark
-from .engines import SearchEngine, BraveSearchEngine, ExaSearchEngine, PerplexitySearchEngine, SearchType
+from .engines import (
+    BraveSearchEngine,
+    ExaSearchEngine,
+    PerplexitySearchEngine,
+    SearchDepth,
+    SearchEngine,
+    SearchType,
+    TavilySearchEngine,
+)
 from .types import BenchmarkResult, BenchmarkSummary, LatencyStats, SearchResult
 
 __all__ = [
@@ -10,7 +18,9 @@ __all__ = [
     "ExaSearchEngine",
     "LatencyStats",
     "PerplexitySearchEngine",
+    "SearchDepth",
     "SearchResult",
     "SearchType",
+    "TavilySearchEngine",
     "run_benchmark",
 ]

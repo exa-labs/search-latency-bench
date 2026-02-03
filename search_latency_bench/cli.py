@@ -9,7 +9,13 @@ from rich.console import Console
 from rich.table import Table
 
 from .benchmark import run_benchmark
-from .engines import BraveSearchEngine, ExaSearchEngine, ParallelSearchEngine, PerplexitySearchEngine
+from .engines import (
+    BraveSearchEngine,
+    ExaSearchEngine,
+    ParallelSearchEngine,
+    PerplexitySearchEngine,
+    TavilySearchEngine,
+)
 from .querygen import generate_queries
 from .types import BenchmarkResult
 
@@ -101,12 +107,13 @@ async def run_benchmark_for_apis(
     output_dir.mkdir(exist_ok=True)
 
     if api == "all":
-        apis_to_test: list[Literal["exa-auto", "exa-fast", "brave", "perplexity", "parallel"]] = [
+        apis_to_test: list[Literal["exa-auto", "exa-fast", "brave", "perplexity", "parallel", "tavily"]] = [
             "exa-auto",
             "exa-fast",
             "brave",
             "perplexity",
             "parallel",
+            "tavily",
         ]  # type: ignore[assignment]
     else:
         apis_to_test = [api]  # type: ignore[assignment]
@@ -132,6 +139,8 @@ async def run_benchmark_for_apis(
                     engine = PerplexitySearchEngine()
                 case "parallel":
                     engine = ParallelSearchEngine()
+                case "tavily":
+                    engine = TavilySearchEngine()
 
             result = await run_benchmark(
                 engine=engine,
@@ -164,7 +173,7 @@ async def run_benchmark_for_apis(
 @app.command()
 def local(
     file: str = typer.Option(..., help="Path to queries file (.json or .jsonl)"),
-    api: str = typer.Option("all", help="API to test (exa/brave/perplexity/all)"),
+    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/parallel/tavily/all)"),
     num_queries: int | None = typer.Option(None, help="Number of queries to sample"),
     num_results: int = typer.Option(10, help="Number of results per query"),
     parallel: bool = typer.Option(False, help="Run queries in parallel"),
@@ -191,7 +200,7 @@ def local(
 @app.command()
 def gen(
     count: int = typer.Option(..., help="Number of queries to generate"),
-    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/all)"),
+    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/parallel/tavily/all)"),
     num_results: int = typer.Option(10, help="Number of results per query"),
     parallel: bool = typer.Option(False, help="Run queries in parallel"),
     max_workers: int = typer.Option(20, help="Max parallel workers"),
@@ -221,7 +230,7 @@ def dataset(
     config: str | None = typer.Option(None, help="Dataset configuration"),
     split: str = typer.Option("train", help="Dataset split"),
     query_field: str = typer.Option("query", help="Field name containing queries"),
-    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/all)"),
+    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/parallel/tavily/all)"),
     num_queries: int | None = typer.Option(None, help="Number of queries to sample"),
     num_results: int = typer.Option(10, help="Number of results per query"),
     parallel: bool = typer.Option(False, help="Run queries in parallel"),

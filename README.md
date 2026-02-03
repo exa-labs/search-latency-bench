@@ -14,6 +14,7 @@ Credentials needed:
 - `BRAVE_API_KEY` - Brave search API
 - `PPLX_API_KEY` - Perplexity search API
 - `PARALLEL_API_KEY` - Parallel search API
+- `TAVILY_API_KEY` - Tavily search API
 - `OPENAI_API_KEY` - For query generation (optional)
 
 ## Sample Queries
@@ -83,6 +84,7 @@ uv run bench local \
 - `brave` - Brave Search
 - `perplexity` - Perplexity Search
 - `parallel` - Parallel Search
+- `tavily` - Tavily Search
 - `all` - Run all APIs sequentially
 
 ## Input Formats
@@ -107,7 +109,8 @@ results/
 ├── exa-auto_results_20250110_143052.json
 ├── exa-fast_results_20250110_143052.json
 ├── brave_results_20250110_143052.json
-└── perplexity_results_20250110_143052.json
+├── perplexity_results_20250110_143052.json
+└── tavily_results_20250110_143052.json
 ```
 
 Each result file includes:
