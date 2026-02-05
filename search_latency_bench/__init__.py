@@ -6,6 +6,7 @@ from .engines import (
     SearchDepth,
     SearchEngine,
     SearchType,
+    SerperSearchEngine,
     TavilySearchEngine,
 )
 from .types import BenchmarkResult, BenchmarkSummary, LatencyStats, SearchResult
@@ -19,6 +20,7 @@ __all__ = [
     "LatencyStats",
     "PerplexitySearchEngine",
     "SearchDepth",
+    "SerperSearchEngine",
     "SearchResult",
     "SearchType",
     "TavilySearchEngine",

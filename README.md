@@ -13,8 +13,8 @@ Credentials needed:
 - `EXA_API_KEY` - Exa search API
 - `BRAVE_API_KEY` - Brave search API
 - `PPLX_API_KEY` - Perplexity search API
-- `PARALLEL_API_KEY` - Parallel search API
 - `TAVILY_API_KEY` - Tavily search API
+- `SERPER_API_KEY` - Serper search API
 - `OPENAI_API_KEY` - For query generation (optional)
 
 ## Sample Queries
@@ -50,6 +50,13 @@ uv run bench local --file queries.jsonl --api all --parallel --max-workers 20
 uv run bench gen --count 100 --api all --parallel
 ```
 
+### SealQA (seal_0)
+
+```bash
+# Use seal_0 queries with randomized dates/numbers to reduce cache hits
+uv run bench seal0 --num-queries 100 --api all
+```
+
 ### HuggingFace Datasets
 
 ```bash
@@ -81,11 +88,14 @@ uv run bench local \
 
 - `exa-auto` - Exa with auto mode
 - `exa-fast` - Exa with fast mode
+- `exa-instant` - Exa with instant mode
 - `brave` - Brave Search
 - `perplexity` - Perplexity Search
-- `parallel` - Parallel Search
 - `tavily` - Tavily Search
+- `serper` - Serper Search
 - `all` - Run all APIs sequentially
+
+Note: `--api all` runs Tavily twice (default and ultra-fast) and saves results as `tavily` and `tavily-ultra-fast`.
 
 ## Input Formats
 
@@ -110,7 +120,9 @@ results/
 ├── exa-fast_results_20250110_143052.json
 ├── brave_results_20250110_143052.json
 ├── perplexity_results_20250110_143052.json
-└── tavily_results_20250110_143052.json
+├── tavily_results_20250110_143052.json
+├── tavily-ultra-fast_results_20250110_143052.json
+└── serper_results_20250110_143052.json
 ```
 
 Each result file includes:

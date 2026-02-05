@@ -9,6 +9,7 @@ class SearchResult(BaseModel):
     api: str
     query: str
     latency_ms: float
+    server_latency_ms: float | None = None
     result_urls: list[str] = Field(default_factory=list)
     status_code: int | None = None
     error: str | None = None
@@ -35,6 +36,7 @@ class BenchmarkSummary(BaseModel):
     successful_queries: int
     failed_queries: int
     latency: LatencyStats | None = None
+    server_latency: LatencyStats | None = None
     by_search_type: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 

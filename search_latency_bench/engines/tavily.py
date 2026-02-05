@@ -4,7 +4,25 @@ from enum import Enum
 
 import httpx
 
-from .engine import SearchEngine
+from .engine import EngineResult, SearchEngine
+
+
+def _parse_response_time_ms(value: object) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value) * 1000
+    if isinstance(value, str):
+        raw = value.strip().lower()
+        try:
+            if raw.endswith("ms"):
+                return float(raw[:-2].strip())
+            if raw.endswith("s"):
+                return float(raw[:-1].strip()) * 1000
+            return float(raw) * 1000
+        except ValueError:
+            return None
+    return None
 
 
 class SearchDepth(str, Enum):
@@ -37,7 +55,7 @@ class TavilySearchEngine(SearchEngine):
             self._client = httpx.AsyncClient(headers=self._headers, timeout=30.0)
         return self._client
 
-    async def __call__(self, query: str, num_results: int) -> list[str]:
+    async def __call__(self, query: str, num_results: int) -> EngineResult:
         response = await self.client.post(
             "https://api.tavily.com/search",
             json={
@@ -55,7 +73,10 @@ class TavilySearchEngine(SearchEngine):
 
         data = response.json()
         results = data.get("results", [])
-        return [result.get("url", "") for result in results]
+        return EngineResult(
+            [result.get("url", "") for result in results],
+            server_latency_ms=_parse_response_time_ms(data.get("response_time")),
+        )
 
     def __del__(self) -> None:
         if self._client and not self._client.is_closed:

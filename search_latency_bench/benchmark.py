@@ -25,7 +25,8 @@ async def process_single_query(
     start_time = time.time()
 
     try:
-        urls = await engine(query, num_results)
+        engine_result = await engine(query, num_results)
+        urls = engine_result.result_urls
         end_time = time.time()
         latency_ms = (end_time - start_time) * 1000
 
@@ -34,6 +35,7 @@ async def process_single_query(
             api=api_name,
             query=query,
             latency_ms=latency_ms,
+            server_latency_ms=engine_result.server_latency_ms,
             result_urls=urls,
             status_code=200,
             timestamp=datetime.now(timezone.utc),
@@ -77,7 +79,11 @@ async def process_batch_parallel(
                     if benchmark_progress and benchmark_progress.failed_count > 0
                     else ""
                 )
-                progress.update(task_id, advance=1, description=f"Processing {len(queries)} queries{failed_text}")
+                progress.update(
+                    task_id,
+                    advance=1,
+                    description=f"{api_name.upper()} {len(queries)} queries{failed_text}",
+                )
             return result
 
     return list(await asyncio.gather(*[bounded_process(q) for q in queries]))
@@ -109,7 +115,11 @@ async def process_batch(
                 if benchmark_progress and benchmark_progress.failed_count > 0
                 else ""
             )
-            progress.update(task_id, advance=1, description=f"Processing {len(queries)} queries{failed_text}")
+            progress.update(
+                task_id,
+                advance=1,
+                description=f"{api_name.upper()} {len(queries)} queries{failed_text}",
+            )
         if len(queries) > 1:
             await asyncio.sleep(0.1)
 
@@ -127,6 +137,7 @@ def calculate_summary_stats(results: list[SearchResult]) -> BenchmarkSummary:
         )
 
     latency_times = [r.latency_ms for r in successful]
+    server_latency_times = [r.server_latency_ms for r in successful if r.server_latency_ms is not None]
 
     summary = BenchmarkSummary(
         total_queries=len(results),
@@ -158,6 +169,30 @@ def calculate_summary_stats(results: list[SearchResult]) -> BenchmarkSummary:
                 mean=mean(latency_times),
             )
 
+    if server_latency_times:
+        if len(server_latency_times) == 1:
+            single_value = server_latency_times[0]
+            summary.server_latency = LatencyStats(
+                min=single_value,
+                p50=single_value,
+                p90=single_value,
+                p95=single_value,
+                p99=single_value,
+                max=single_value,
+                mean=single_value,
+            )
+        else:
+            q = quantiles(server_latency_times, n=100, method="inclusive")
+            summary.server_latency = LatencyStats(
+                min=min(server_latency_times),
+                p50=q[49],
+                p90=q[89],
+                p95=q[94],
+                p99=q[98],
+                max=max(server_latency_times),
+                mean=mean(server_latency_times),
+            )
+
     return summary
 
 
@@ -165,21 +200,54 @@ async def run_benchmark(
     engine: SearchEngine,
     queries: list[str],
     num_results: int,
-    api_name: Literal["exa-auto", "exa-fast", "brave", "perplexity", "parallel"],
+    api_name: Literal[
+        "exa-auto",
+        "exa-fast",
+        "exa-instant",
+        "brave",
+        "perplexity",
+        "parallel",
+        "tavily",
+        "tavily-ultra-fast",
+        "serper",
+    ],
     parallel: bool = True,
     max_workers: int = 20,
+    progress: Progress | None = None,
+    task_id: TaskID | None = None,
 ) -> BenchmarkResult:
     start_time = time.time()
     benchmark_progress = BenchmarkProgress()
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-    ) as progress:
-        task = progress.add_task(f"Processing {len(queries)} queries", total=len(queries))
+    if progress is None:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeElapsedColumn(),
+        ) as local_progress:
+            task = local_progress.add_task(
+                f"{api_name.upper()} {len(queries)} queries",
+                total=len(queries),
+            )
+            results = await process_batch(
+                engine,
+                queries,
+                num_results,
+                api_name,
+                parallel=parallel,
+                max_workers=max_workers,
+                progress=local_progress,
+                task_id=task,
+                benchmark_progress=benchmark_progress,
+            )
+    else:
+        if task_id is None:
+            task_id = progress.add_task(
+                f"{api_name.upper()} {len(queries)} queries",
+                total=len(queries),
+            )
         results = await process_batch(
             engine,
             queries,
@@ -188,7 +256,7 @@ async def run_benchmark(
             parallel=parallel,
             max_workers=max_workers,
             progress=progress,
-            task_id=task,
+            task_id=task_id,
             benchmark_progress=benchmark_progress,
         )
 

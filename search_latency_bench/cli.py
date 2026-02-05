@@ -14,6 +14,8 @@ from .engines import (
     ExaSearchEngine,
     ParallelSearchEngine,
     PerplexitySearchEngine,
+    SerperSearchEngine,
+    SearchDepth,
     TavilySearchEngine,
 )
 from .querygen import generate_queries
@@ -48,6 +50,49 @@ def load_queries(file_path: str, num_queries: int | None = None) -> list[str]:
         queries = random.sample(queries, min(num_queries, len(queries)))
 
     return queries
+
+
+def extract_query_from_example(example: dict) -> str:
+    preferred_fields = ("query", "question", "prompt", "instruction", "text")
+    for field in preferred_fields:
+        value = example.get(field)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    for value in example.values():
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def randomize_queries(queries: list[str], seed: int | None = None) -> list[str]:
+    rng = random.Random(seed)
+    current_year = datetime.now().year
+    year_re = re.compile(r"\b(19\d{2}|20\d{2})\b")
+    num_re = re.compile(r"\b\d+\b")
+
+    def replace_year(match: re.Match[str]) -> str:
+        return str(rng.randint(1990, current_year))
+
+    def replace_num(match: re.Match[str]) -> str:
+        token = match.group(0)
+        try:
+            value = int(token)
+        except ValueError:
+            return token
+        if len(token) == 4 and 1900 <= value <= current_year:
+            return token
+        if len(token) == 1:
+            return str(rng.randint(0, 9))
+        return "".join(str(rng.randint(0, 9)) for _ in range(len(token)))
+
+    randomized = []
+    for query in queries:
+        updated = year_re.sub(replace_year, query)
+        updated = num_re.sub(replace_num, updated)
+        if updated == query:
+            updated = f"{updated} {rng.randint(1990, current_year)}"
+        randomized.append(updated)
+    return randomized
 
 
 def print_summary(result: BenchmarkResult) -> None:
@@ -107,20 +152,31 @@ async def run_benchmark_for_apis(
     output_dir.mkdir(exist_ok=True)
 
     if api == "all":
-        apis_to_test: list[Literal["exa-auto", "exa-fast", "brave", "perplexity", "parallel", "tavily"]] = [
+        apis_to_test: list[
+            Literal[
+                "exa-auto",
+                "exa-fast",
+                "brave",
+                "perplexity",
+                "parallel",
+                "tavily",
+                "tavily-ultra-fast",
+                "serper",
+            ]
+        ] = [
             "exa-auto",
             "exa-fast",
             "brave",
             "perplexity",
             "parallel",
             "tavily",
+            "tavily-ultra-fast",
+            "serper",
         ]  # type: ignore[assignment]
     else:
         apis_to_test = [api]  # type: ignore[assignment]
 
-    results = []
-
-    for api_name in apis_to_test:
+    async def run_single_api(api_name: str) -> BenchmarkResult | None:
         console.print(f"\n[bold yellow]Running benchmark for {api_name.upper()}[/bold yellow]")
 
         try:
@@ -133,6 +189,10 @@ async def run_benchmark_for_apis(
                     from .engines.exa import SearchType
 
                     engine = ExaSearchEngine(type=SearchType.FAST)
+                case "exa-instant":
+                    from .engines.exa import SearchType
+
+                    engine = ExaSearchEngine(type=SearchType.INSTANT)
                 case "brave":
                     engine = BraveSearchEngine()
                 case "perplexity":
@@ -140,18 +200,22 @@ async def run_benchmark_for_apis(
                 case "parallel":
                     engine = ParallelSearchEngine()
                 case "tavily":
-                    engine = TavilySearchEngine()
+                    engine = TavilySearchEngine(search_depth=SearchDepth.BASIC)
+                case "tavily-ultra-fast":
+                    engine = TavilySearchEngine(search_depth=SearchDepth.ULTRA_FAST)
+                case "serper":
+                    engine = SerperSearchEngine()
+                case _:
+                    raise ValueError(f"Unknown API: {api_name}")
 
             result = await run_benchmark(
                 engine=engine,
                 queries=queries,
                 num_results=num_results,
-                api_name=api_name,
+                api_name=api_name,  # type: ignore[arg-type]
                 parallel=parallel,
                 max_workers=max_workers,
             )
-
-            results.append(result)
 
             timestamp = result.timestamp.strftime("%Y%m%d_%H%M%S")
             result_file = output_dir / f"{api_name}_results_{timestamp}.json"
@@ -159,8 +223,17 @@ async def run_benchmark_for_apis(
                 json.dump(result.model_dump(mode="json"), f, indent=2, default=str)
             console.print(f"[green]Saved results to {result_file}[/green]")
 
+            return result
         except Exception as e:
             console.print(f"[red]Error running {api_name}: {e}[/red]")
+            return None
+
+    results: list[BenchmarkResult] = []
+
+    for api_name in apis_to_test:
+        result = await run_single_api(api_name)
+        if result:
+            results.append(result)
 
     if len(results) > 1:
         print_combined_summary(results)
@@ -173,7 +246,10 @@ async def run_benchmark_for_apis(
 @app.command()
 def local(
     file: str = typer.Option(..., help="Path to queries file (.json or .jsonl)"),
-    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/parallel/tavily/all)"),
+    api: str = typer.Option(
+        "all",
+        help="API to test (exa-auto/exa-fast/exa-instant/brave/perplexity/parallel/tavily/serper/all)",
+    ),
     num_queries: int | None = typer.Option(None, help="Number of queries to sample"),
     num_results: int = typer.Option(10, help="Number of results per query"),
     parallel: bool = typer.Option(False, help="Run queries in parallel"),
@@ -200,17 +276,79 @@ def local(
 @app.command()
 def gen(
     count: int = typer.Option(..., help="Number of queries to generate"),
-    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/parallel/tavily/all)"),
+    api: str = typer.Option(
+        "all",
+        help="API to test (exa-auto/exa-fast/exa-instant/brave/perplexity/parallel/tavily/serper/all)",
+    ),
     num_results: int = typer.Option(10, help="Number of results per query"),
     parallel: bool = typer.Option(False, help="Run queries in parallel"),
     max_workers: int = typer.Option(20, help="Max parallel workers"),
     output: str = typer.Option("results", help="Output directory"),
+    save_queries: str | None = typer.Option(None, help="Save generated queries to a JSON file"),
 ) -> None:
     load_dotenv()
 
     console.print(f"[bold]Generating {count} queries using GPT-5-mini...[/bold]")
     queries = asyncio.run(generate_queries(count))
     console.print(f"[bold]Generated {len(queries)} queries[/bold]")
+
+    if save_queries:
+        save_path = Path(save_queries)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_path, "w") as f:
+            json.dump(queries, f, indent=2)
+        console.print(f"[green]Saved queries to {save_path}[/green]")
+
+    asyncio.run(
+        run_benchmark_for_apis(
+            queries=queries,
+            api=api,
+            num_results=num_results,
+            parallel=parallel,
+            max_workers=max_workers,
+            output=output,
+        )
+    )
+
+
+@app.command()
+def seal0(
+    api: str = typer.Option(
+        "all",
+        help="API to test (exa-auto/exa-fast/exa-instant/brave/perplexity/parallel/tavily/serper/all)",
+    ),
+    num_queries: int | None = typer.Option(None, help="Number of queries to sample"),
+    num_results: int = typer.Option(10, help="Number of results per query"),
+    parallel: bool = typer.Option(False, help="Run queries in parallel"),
+    max_workers: int = typer.Option(20, help="Max parallel workers"),
+    output: str = typer.Option("results", help="Output directory"),
+    randomize: bool = typer.Option(
+        True,
+        "--randomize/--no-randomize",
+        help="Randomize dates/numbers to reduce cache hits",
+    ),
+    seed: int | None = typer.Option(None, help="Random seed for query randomization"),
+) -> None:
+    load_dotenv()
+
+    from datasets import load_dataset
+
+    console.print("[bold]Loading vtllms/sealqa (seal_0)...[/bold]")
+    dataset_obj = load_dataset("vtllms/sealqa", "seal_0", split="test", streaming=True)
+
+    queries = []
+    for example in dataset_obj:
+        query = extract_query_from_example(example)
+        if query:
+            queries.append(query)
+        if num_queries and len(queries) >= num_queries:
+            break
+
+    if randomize:
+        queries = randomize_queries(queries, seed=seed)
+        console.print("[bold]Randomized queries to reduce cache hits[/bold]")
+
+    console.print(f"[bold]Loaded {len(queries)} queries from seal_0[/bold]")
 
     asyncio.run(
         run_benchmark_for_apis(
@@ -230,12 +368,16 @@ def dataset(
     config: str | None = typer.Option(None, help="Dataset configuration"),
     split: str = typer.Option("train", help="Dataset split"),
     query_field: str = typer.Option("query", help="Field name containing queries"),
-    api: str = typer.Option("all", help="API to test (exa-auto/exa-fast/brave/perplexity/parallel/tavily/all)"),
+    api: str = typer.Option(
+        "all",
+        help="API to test (exa-auto/exa-fast/exa-instant/brave/perplexity/tavily/serper/all)",
+    ),
     num_queries: int | None = typer.Option(None, help="Number of queries to sample"),
     num_results: int = typer.Option(10, help="Number of results per query"),
     parallel: bool = typer.Option(False, help="Run queries in parallel"),
     max_workers: int = typer.Option(20, help="Max parallel workers"),
     output: str = typer.Option("results", help="Output directory"),
+    save_queries: str | None = typer.Option(None, help="Save loaded queries to a JSON file"),
 ) -> None:
     load_dotenv()
 
@@ -256,6 +398,13 @@ def dataset(
             break
 
     console.print(f"[bold]Loaded {len(queries)} queries from {name}[/bold]")
+
+    if save_queries:
+        save_path = Path(save_queries)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_path, "w") as f:
+            json.dump(queries, f, indent=2)
+        console.print(f"[green]Saved queries to {save_path}[/green]")
 
     asyncio.run(
         run_benchmark_for_apis(
